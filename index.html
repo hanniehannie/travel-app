@@ -1259,57 +1259,43 @@ async function doTranslate() {
   btn.disabled = true; btn.textContent = '번역 중...';
 
   const info = TRIP_SCHEDULE.find(s => s.lang === currentLang);
-  const prompt = `다음 한국어 문장을 ${info.name}로 번역해주세요.
-
-중요 규칙:
-1. 교과서식 직역이 아닌, 현지인이 일상에서 실제로 자주 쓰는 자연스러운 표현으로 번역하세요.
-2. 더 자연스럽거나 생동감 있는 현지 표현이 있다면 그것을 우선적으로 사용하세요.
-   예) "정말 맛있어요" → "¡Buenísimo!" (스페인어), "C'est délicieux !" (프랑스어)
-   예) "감사합니다" → "¡Gracias!" / "Merci !"
-   예) "얼마예요?" → "¿Cuánto cuesta?" / "C'est combien ?"
-3. 만약 더 자연스러운 대안 표현이 있다면 alternatives 배열에 1~2개 추가하세요.
-4. 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 절대 포함하지 마세요.
-
-{"translated": "가장 자연스러운 현지 표현", "pronunciation": "한국어로 읽는 발음 (예: 부에니씨모)", "alternatives": ["대안표현1 (발음)", "대안표현2 (발음)"]}
-
-한국어 문장: ${input}`;
 
   try {
-    const response = await fetch('/.netlify/functions/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 500,
-        messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }]
-      })
-    });
+    // MyMemory 무료 번역 API 사용
+    const langPair = `ko|${info.lang}`;
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(input)}&langpair=${langPair}`;
+    const response = await fetch(url);
     const data = await response.json();
-    if (!data.content) { console.error('API Error:', JSON.stringify(data)); throw new Error('API Error: ' + JSON.stringify(data)); }
-    const raw = data.content[0].text.replace(/```json|```/g,'').trim();
-    const result = JSON.parse(raw);
+
+    if (!data.responseData || data.responseData.translatedText === '') {
+      throw new Error('번역 결과 없음');
+    }
+
+    const translated = data.responseData.translatedText;
+
+    // 발음은 별도 Claude 호출 없이 안내 문구로 대체
+    const pronGuide = info.lang === 'es'
+      ? '스페인어는 철자 그대로 읽으시면 돼요 (받침 없이 또박또박)'
+      : '프랑스어는 끝 자음을 묵음으로 읽는 경우가 많아요';
 
     document.getElementById('t-result-badge').textContent = info.flag + ' ' + info.name;
-    document.getElementById('t-result-text').textContent = result.translated;
-    document.getElementById('t-result-pron').textContent = result.pronunciation;
+    document.getElementById('t-result-text').textContent = translated;
+    document.getElementById('t-result-pron').textContent = pronGuide;
 
-    // 대안 표현 렌더링
+    // 대안 표현 숨기기
     const altWrap = document.getElementById('t-alternatives');
-    if (result.alternatives && result.alternatives.length) {
-      altWrap.innerHTML = '<div class="alt-label">💬 다른 표현도 있어요</div>' +
-        result.alternatives.map(a => `<div class="alt-item" onclick="copyAlt(this)">${a} <span class="alt-copy">복사</span></div>`).join('');
-      altWrap.style.display = 'block';
-    } else {
-      altWrap.style.display = 'none';
-    }
+    altWrap.style.display = 'none';
+
     document.getElementById('t-result-card').classList.add('visible');
 
     // 히스토리 추가
-    translateHistory.unshift({ orig: input, trans: result.translated, pron: result.pronunciation, flag: info.flag });
+    translateHistory.unshift({ orig: input, trans: translated, pron: pronGuide, flag: info.flag });
     if (translateHistory.length > 10) translateHistory.pop();
     renderHistory();
+
   } catch(e) {
     alert('번역 중 오류가 발생했어요. 다시 시도해 주세요.');
+    console.error(e);
   }
   btn.disabled = false; btn.textContent = '번역하기 ✨';
 }
