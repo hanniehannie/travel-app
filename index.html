@@ -1398,7 +1398,7 @@ function autoResize(el) {
 // ── 번역 탭 ──
 
 
-let currentLang = 'es';
+currentLang = 'es';
 let translateHistory = [];
 
 function getAutoLang() {
@@ -1409,10 +1409,7 @@ function getAutoLang() {
   return 'es'; // default
 }
 
-function initTranslateLang() {
-  const auto = getAutoLang();
-  setLang(auto, true);
-}
+
 
 function setLang(lang, silent) {
   currentLang = lang;
