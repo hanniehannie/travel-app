@@ -1396,10 +1396,7 @@ function autoResize(el) {
 }
 
 // ── 번역 탭 ──
-const TRIP_SCHEDULE = [
-  { start: '2026-04-30', end: '2026-05-03', lang: 'es', flag: '🇪🇸', name: '스페인어', region: '4/30–5/3 바르셀로나 구간' },
-  { start: '2026-05-04', end: '2026-05-10', lang: 'fr', flag: '🇫🇷', name: '프랑스어', region: '5/4–5/10 프랑스 구간' },
-];
+
 
 let currentLang = 'es';
 let translateHistory = [];
@@ -1491,51 +1488,6 @@ function generatePronunciation(text, lang) {
   return result || '발음: 철자를 또박또박 읽어보세요';
 }
 
-async function doTranslate() {
-  const input = document.getElementById('t-input').value.trim();
-  if (!input) return;
-  const btn = document.getElementById('t-btn');
-  btn.disabled = true; btn.textContent = '번역 중...';
-
-  const info = TRIP_SCHEDULE.find(s => s.lang === currentLang);
-
-  try {
-    // MyMemory 무료 번역 API 사용
-    const langPair = `ko|${info.lang}`;
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(input)}&langpair=${langPair}`;
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (!data.responseData || data.responseData.translatedText === '') {
-      throw new Error('번역 결과 없음');
-    }
-
-    const translated = data.responseData.translatedText;
-
-    // 번역된 텍스트를 한국어 발음으로 변환
-    const pronGuide = generatePronunciation(translated, info.lang);
-
-    document.getElementById('t-result-badge').textContent = info.flag + ' ' + info.name;
-    document.getElementById('t-result-text').textContent = translated;
-    document.getElementById('t-result-pron').textContent = pronGuide;
-
-    // 대안 표현 숨기기
-    const altWrap = document.getElementById('t-alternatives');
-    altWrap.style.display = 'none';
-
-    document.getElementById('t-result-card').classList.add('visible');
-
-    // 히스토리 추가
-    translateHistory.unshift({ orig: input, trans: translated, pron: pronGuide, flag: info.flag });
-    if (translateHistory.length > 10) translateHistory.pop();
-    renderHistory();
-
-  } catch(e) {
-    alert('번역 중 오류가 발생했어요. 다시 시도해 주세요.');
-    console.error(e);
-  }
-  btn.disabled = false; btn.textContent = '번역하기 ✨';
-}
 
 function copyAlt(el) {
   const text = el.childNodes[0].textContent.trim();
